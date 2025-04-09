@@ -2,10 +2,12 @@
 
 import { useIntegrationApp, useIntegrations } from "@integration-app/react"
 import type { Integration as IntegrationAppIntegration } from "@integration-app/sdk"
+import { useState } from "react"
 
 export function IntegrationList() {
   const integrationApp = useIntegrationApp()
   const { integrations, refresh } = useIntegrations()
+  const [configuringKey, setConfiguringKey] = useState<string | null>(null)
 
   const handleConnect = async (integration: IntegrationAppIntegration) => {
     try {
@@ -23,6 +25,17 @@ export function IntegrationList() {
       refresh()
     } catch (error) {
       console.error("Failed to disconnect:", error)
+    }
+  }
+
+  const handleConfigure = async (integration: IntegrationAppIntegration) => {
+    try {
+      setConfiguringKey(integration.key)
+      await integrationApp.integration(integration.key).open()
+    } catch (error) {
+      console.error("Failed to configure integration:", error)
+    } finally {
+      setConfiguringKey(null)
     }
   }
 
@@ -52,20 +65,31 @@ export function IntegrationList() {
               {integration.name}
             </h3>
           </div>
-          <button
-            onClick={() =>
-              integration.connection
-                ? handleDisconnect(integration)
-                : handleConnect(integration)
-            }
-            className={`px-4 py-2 rounded-md font-medium transition-colors ${
-              integration.connection
-                ? "bg-red-100 text-red-700 dark:bg-red-700 dark:text-red-100 hover:bg-red-200 hover:text-red-800 dark:hover:bg-red-800 dark:hover:text-red-100"
-                : "bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300 hover:bg-blue-100 hover:text-blue-700 dark:hover:bg-blue-700 dark:hover:text-blue-100"
-            }`}
-          >
-            {integration.connection ? "Disconnect" : "Connect"}
-          </button>
+          <div className="flex gap-2">
+            {integration.connection && (
+              <button
+                onClick={() => handleConfigure(integration)}
+                disabled={configuringKey === integration.key}
+                className="px-4 py-2 rounded-md font-medium transition-colors bg-green-100 text-green-700 dark:bg-green-700 dark:text-green-100 hover:bg-green-200 hover:text-green-800 dark:hover:bg-green-800 dark:hover:text-green-100 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {configuringKey === integration.key ? "Configuring..." : "Configure"}
+              </button>
+            )}
+            <button
+              onClick={() =>
+                integration.connection
+                  ? handleDisconnect(integration)
+                  : handleConnect(integration)
+              }
+              className={`px-4 py-2 rounded-md font-medium transition-colors ${
+                integration.connection
+                  ? "bg-red-100 text-red-700 dark:bg-red-700 dark:text-red-100 hover:bg-red-200 hover:text-red-800 dark:hover:bg-red-800 dark:hover:text-red-100"
+                  : "bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300 hover:bg-blue-100 hover:text-blue-700 dark:hover:bg-blue-700 dark:hover:text-blue-100"
+              }`}
+            >
+              {integration.connection ? "Disconnect" : "Connect"}
+            </button>
+          </div>
         </li>
       ))}
     </ul>
