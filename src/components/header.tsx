@@ -48,6 +48,12 @@ export function Header() {
               >
                 Records
               </Link>
+              <Link
+                href="/forms"
+                className="inline-flex items-center px-1 pt-1 text-sm font-medium"
+              >
+                Forms
+              </Link>
             </div>
           </div>
           <div className="flex items-center">
