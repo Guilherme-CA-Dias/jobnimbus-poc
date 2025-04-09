@@ -10,8 +10,10 @@ declare global {
   var mongoose: MongooseCache | undefined;
 }
 
-if (!process.env.MONGODB_URI) {
-  throw new Error('MONGODB_URI environment variable is not defined. Please set it in your .env file.');
+const MONGODB_URI = process.env.MONGODB_URI;
+
+if (!MONGODB_URI) {
+  throw new Error('Please define the MONGODB_URI environment variable inside .env');
 }
 
 const cached: MongooseCache = global.mongoose || { conn: null, promise: null };
@@ -33,7 +35,7 @@ export async function connectToDatabase(): Promise<typeof mongoose> {
       family: 4, // Use IPv4, skip trying IPv6
     };
 
-    cached.promise = mongoose.connect(process.env.MONGODB_URI as string, opts);
+    cached.promise = mongoose.connect(MONGODB_URI, opts);
   }
 
   try {

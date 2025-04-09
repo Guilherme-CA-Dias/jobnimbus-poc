@@ -8,7 +8,7 @@ export function useSchema(recordType: string) {
   // Remove 'get-' prefix and handle pluralization
   const schemaType = recordType.replace('get-', '').replace(/s$/, '') + 's'
   
-  const { data, error, isLoading } = useSWR<{ schema: JSONSchema }>(
+  const { data, error, isLoading, mutate } = useSWR<{ schema: JSONSchema }>(
     customerId && recordType ? `/api/schema/${schemaType}/${customerId}` : null,
     async (url) => {
       const response = await fetch(url)
@@ -22,6 +22,7 @@ export function useSchema(recordType: string) {
   return {
     schema: data?.schema,
     isLoading,
-    error
+    error,
+    mutate
   }
 } 

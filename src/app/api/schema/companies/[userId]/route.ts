@@ -1,69 +1,51 @@
 import { NextResponse } from 'next/server'
+import { connectToDatabase } from '@/lib/mongodb'
+import { FieldSchema } from '@/models/schema'
 
 export async function GET(
   request: Request,
-  context: { params: Promise<{ userId: string }> }
+  { params }: { params: { userId: string } }
 ) {
-  const { userId } = await context.params
+  const { userId } = await Promise.resolve(params)
+  
+  await connectToDatabase()
 
-  const schema = {
-    schema: {
-      type: "object",
-      properties: {
-        id: {
-          type: "string",
-          title: "ID"
-        },
-        name: {
-          type: "string",
-          title: "Company Name"
-        },
-        website: {
-          type: "string",
-          title: "Website",
-          format: "uri"
-        },
+  let schema = await FieldSchema.findOne({
+    customerId: userId,
+    recordType: 'company'
+  })
+
+  if (!schema) {
+    schema = await FieldSchema.create({
+      customerId: userId,
+      recordType: 'company',
+      properties: new Map(Object.entries({
+        id: { type: 'string', title: 'ID' },
+        name: { type: 'string', title: 'Company Name' },
+        website: { type: 'string', title: 'Website', format: 'uri' },
         industry: {
-          type: "string",
-          title: "Industry",
-          enum: ["Technology", "Healthcare", "Finance", "Manufacturing", "Retail", "Other"]
-        },
-        size: {
-          type: "string",
-          title: "Company Size",
-          enum: ["1-10", "11-50", "51-200", "201-500", "501-1000", "1000+"]
-        },
-        phone: {
-          type: "string",
-          title: "Phone Number",
-          format: "phone"
-        },
-        address: {
-          type: "string",
-          title: "Address"
-        },
-        city: {
-          type: "string",
-          title: "City"
-        },
-        state: {
-          type: "string",
-          title: "State"
-        },
-        country: {
-          type: "string",
-          title: "Country"
-        },
-        status: {
-          type: "string",
-          title: "Status",
-          enum: ["Active", "Inactive", "Prospect"],
-          default: "Active"
+          type: 'string',
+          title: 'Industry',
+          enum: ['Technology', 'Healthcare', 'Finance', 'Manufacturing', 'Retail', 'Other']
         }
-      },
-      required: ["id", "name", "industry", "status"]
-    }
+      })),
+      required: ['id', 'name']
+    })
   }
 
-  return NextResponse.json(schema)
+  return NextResponse.json({
+    schema: {
+      type: "object",
+      properties: Object.fromEntries(schema.properties),
+      required: schema.required
+    }
+  })
+}
+
+export async function POST(
+  request: Request,
+  { params }: { params: { userId: string } }
+) {
+  // Same as contacts POST handler but with recordType: 'company'
+  // ... implementation
 } 
