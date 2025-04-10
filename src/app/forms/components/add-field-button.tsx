@@ -19,7 +19,7 @@ export function AddFieldButton({ recordType, onFieldAdded }: AddFieldButtonProps
   const [fieldData, setFieldData] = useState({
     name: '',
     title: '',
-    type: 'text',
+    type: 'string',
     required: false
   })
 
@@ -58,7 +58,7 @@ export function AddFieldButton({ recordType, onFieldAdded }: AddFieldButtonProps
       console.log('Field added successfully:', result)
 
       setOpen(false)
-      setFieldData({ name: '', title: '', type: 'text', required: false })
+      setFieldData({ name: '', title: '', type: 'string', required: false })
       onFieldAdded()
     } catch (error) {
       console.error('Error adding field:', error)
@@ -108,7 +108,7 @@ export function AddFieldButton({ recordType, onFieldAdded }: AddFieldButtonProps
               value={fieldData.type}
               onChange={(e) => setFieldData(prev => ({ ...prev, type: e.target.value }))}
             >
-              <option value="text">Text</option>
+              <option value="string">Text</option>
               <option value="email">Email</option>
               <option value="phone">Phone</option>
               <option value="select">Select</option>

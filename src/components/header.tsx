@@ -54,6 +54,12 @@ export function Header() {
               >
                 Forms
               </Link>
+              <Link
+                href="/submit-form"
+                className="inline-flex items-center px-1 pt-1 text-sm font-medium"
+              >
+                Push information/Submit form
+              </Link>
             </div>
           </div>
           <div className="flex items-center">
