@@ -1,0 +1,213 @@
+import { NextResponse } from 'next/server'
+import { connectToDatabase } from '@/lib/mongodb'
+import { FieldSchema } from '@/models/schema'
+import { FormDefinition } from '@/models/form'
+import type { MongoSchemaProperty, SchemaField } from '@/types/schema'
+import { DEFAULT_SCHEMAS } from '@/lib/default-schemas'
+
+// Helper function to clean properties
+const cleanSchemaProperties = (properties: Map<string, MongoSchemaProperty>) => {
+  return Object.fromEntries(
+    Array.from(properties.entries()).map(([key, value]) => {
+      const cleanValue = value.toObject()
+      return [key, cleanValue]
+    })
+  )
+}
+
+// Helper to create a new field
+const createField = (field: { name: string; title: string; type: string; required?: boolean; options?: string[]; default?: string }): MongoSchemaProperty => {
+  const schemaField: SchemaField = {
+    type: field.type,
+    title: field.title,
+    ...(field.type === 'email' && { format: 'email' }),
+    ...(field.type === 'phone' && { format: 'phone' }),
+    ...(field.type === 'currency' && { format: 'currency' }),
+    ...(field.type === 'date' && { format: 'date' }),
+    ...(field.type === 'select' && { enum: field.options }),
+    ...(field.default && { default: field.default })
+  }
+
+  return {
+    ...schemaField,
+    toObject: () => ({
+      type: schemaField.type,
+      title: schemaField.title,
+      ...(schemaField.format && { format: schemaField.format }),
+      ...(schemaField.enum?.length && { enum: schemaField.enum }),
+      ...(schemaField.default && { default: schemaField.default })
+    })
+  }
+}
+
+export async function GET(
+  request: Request,
+  { params }: { params: { formId: string; userId: string } }
+) {
+  const { formId, userId } = await Promise.resolve(params)
+  
+  await connectToDatabase()
+
+  // First, verify the form exists
+  const formDefinition = await FormDefinition.findOne({
+    customerId: userId,
+    formId: formId.toLowerCase()
+  })
+
+  if (!formDefinition) {
+    return NextResponse.json({ error: 'Form not found' }, { status: 404 })
+  }
+
+  let schema = await FieldSchema.findOne({
+    customerId: userId,
+    recordType: formId.toLowerCase()
+  })
+
+  if (!schema) {
+    const defaultSchema = DEFAULT_SCHEMAS[formId.toLowerCase() as keyof typeof DEFAULT_SCHEMAS]
+    
+    schema = await FieldSchema.create({
+      customerId: userId,
+      recordType: formId.toLowerCase(),
+      properties: new Map(Object.entries(defaultSchema?.properties || {
+        id: { type: 'string', title: 'ID' },
+        name: { type: 'string', title: 'Name' }
+      })),
+      required: defaultSchema?.required || ['id', 'name']
+    })
+  }
+
+  const cleanProperties = cleanSchemaProperties(schema.properties)
+
+  return NextResponse.json({
+    schema: {
+      type: "object",
+      properties: cleanProperties,
+      required: schema.required
+    }
+  })
+}
+
+export async function POST(
+  request: Request,
+  { params }: { params: { formId: string; userId: string } }
+) {
+  try {
+    const { formId, userId } = await Promise.resolve(params)
+    const { field } = await request.json()
+
+    if (!field || !field.name || !field.type || !field.title) {
+      return NextResponse.json({ error: 'Invalid field data' }, { status: 400 })
+    }
+
+    await connectToDatabase()
+
+    // First, verify the form exists
+    const formDefinition = await FormDefinition.findOne({
+      customerId: userId,
+      formId: formId.toLowerCase()
+    })
+
+    if (!formDefinition) {
+      return NextResponse.json({ error: 'Form not found' }, { status: 404 })
+    }
+
+    let schema = await FieldSchema.findOne({
+      customerId: userId,
+      recordType: formId.toLowerCase()
+    })
+
+    if (!schema) {
+      // For default forms, use the default schema
+      const defaultSchema = DEFAULT_SCHEMAS[formId.toLowerCase() as keyof typeof DEFAULT_SCHEMAS]
+      const initialProperties = defaultSchema?.properties || {
+        id: { type: 'string', title: 'ID' },
+        name: { type: 'string', title: 'Name' }
+      }
+
+      // Convert default properties to MongoSchemaProperty format
+      const mongoProperties = new Map(
+        Object.entries(initialProperties).map(([key, value]) => [
+          key,
+          createField({ name: key, ...value })
+        ])
+      )
+
+      schema = await FieldSchema.create({
+        customerId: userId,
+        recordType: formId.toLowerCase(),
+        properties: mongoProperties,
+        required: defaultSchema?.required || ['id', 'name']
+      })
+    }
+
+    const newField = createField(field)
+    schema.properties.set(field.name, newField)
+
+    if (field.required) {
+      schema.required = [...new Set([...(schema.required || []), field.name])]
+    }
+
+    await schema.save()
+
+    const cleanProperties = cleanSchemaProperties(schema.properties)
+
+    return NextResponse.json({
+      schema: {
+        type: "object",
+        properties: cleanProperties,
+        required: schema.required
+      }
+    })
+  } catch (error) {
+    console.error('Error adding field:', error)
+    return NextResponse.json(
+      { error: 'Failed to add field' },
+      { status: 500 }
+    )
+  }
+}
+
+export async function DELETE(
+  request: Request,
+  { params }: { params: { formId: string; userId: string } }
+) {
+  const { formId, userId } = await Promise.resolve(params)
+  const { fieldName } = await request.json()
+
+  await connectToDatabase()
+
+  // First, verify the form exists
+  const formDefinition = await FormDefinition.findOne({
+    customerId: userId,
+    formId: formId.toLowerCase()
+  })
+
+  if (!formDefinition) {
+    return NextResponse.json({ error: 'Form not found' }, { status: 404 })
+  }
+
+  let schema = await FieldSchema.findOne({
+    customerId: userId,
+    recordType: formId.toLowerCase()
+  })
+
+  if (!schema) {
+    return NextResponse.json({ error: 'Schema not found' }, { status: 404 })
+  }
+
+  schema.properties.delete(fieldName)
+  schema.required = schema.required.filter((name: string) => name !== fieldName)
+
+  await schema.save()
+
+  const cleanProperties = cleanSchemaProperties(schema.properties)
+
+  return NextResponse.json({
+    schema: {
+      type: "object",
+      properties: cleanProperties,
+      required: schema.required
+    }
+  })
+} 

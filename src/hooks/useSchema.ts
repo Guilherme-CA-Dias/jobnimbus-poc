@@ -5,11 +5,11 @@ import { JSONSchema } from '@/types/contact-schema'
 export function useSchema(recordType: string) {
   const { customerId } = useAuth()
   
-  // Remove 'get-' prefix and handle pluralization
-  const schemaType = recordType.replace('get-', '').replace(/s$/, '') + 's'
+  // Remove 'get-' prefix
+  const formId = recordType.replace('get-', '')
   
   const { data, error, isLoading, mutate } = useSWR<{ schema: JSONSchema }>(
-    customerId && recordType ? `/api/schema/${schemaType}/${customerId}` : null,
+    customerId && formId ? `/api/schema/${formId}/${customerId}` : null,
     async (url) => {
       const response = await fetch(url)
       if (!response.ok) {

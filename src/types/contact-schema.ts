@@ -29,4 +29,13 @@ export interface JSONSchema {
 
 export interface SchemaResponse {
   schema: JSONSchema
+}
+
+export interface SchemaProperty {
+  type: string
+  title: string
+  format?: string
+  enum?: string[]
+  default?: string
+  toObject(): SchemaProperty
 } 

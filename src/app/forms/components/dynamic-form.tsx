@@ -98,8 +98,8 @@ export function DynamicForm({ recordType }: DynamicFormProps) {
 
   return (
     <div className="space-y-4">
-      <div className="flex justify-between items-center">
-        <h2 className="text-lg font-medium">Form Fields</h2>
+      <div className="flex items-center gap-4">
+        <h2 className="text-xl font-semibold">Form Fields</h2>
         <AddFieldButton 
           recordType={recordType} 
           onFieldAdded={() => mutate()} 

@@ -68,12 +68,10 @@ export function AddFieldButton({ recordType, onFieldAdded }: AddFieldButtonProps
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <button
-          className="px-4 py-2 rounded-md font-medium transition-colors bg-green-100 text-green-700 dark:bg-green-700 dark:text-green-100 hover:bg-green-200 hover:text-green-800 dark:hover:bg-green-800 dark:hover:text-green-100 flex items-center"
-        >
-          <Plus className="mr-2 h-4 w-4" />
+        <Button className="flex items-center gap-2 bg-primary hover:bg-primary-600 transition-colors">
+          <Plus className="h-4 w-4" />
           Add Field
-        </button>
+        </Button>
       </DialogTrigger>
       <DialogContent className="bg-white dark:bg-gray-950">
         <DialogHeader>
