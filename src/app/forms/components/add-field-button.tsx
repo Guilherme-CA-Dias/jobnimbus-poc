@@ -13,14 +13,21 @@ interface AddFieldButtonProps {
   onFieldAdded: () => void
 }
 
+interface FieldData {
+  name: string
+  title: string
+  type: string
+  options: string
+}
+
 export function AddFieldButton({ recordType, onFieldAdded }: AddFieldButtonProps) {
   const { customerId } = useAuth()
   const [open, setOpen] = useState(false)
-  const [fieldData, setFieldData] = useState({
+  const [fieldData, setFieldData] = useState<FieldData>({
     name: '',
     title: '',
     type: 'string',
-    required: false
+    options: ''
   })
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -31,34 +38,41 @@ export function AddFieldButton({ recordType, onFieldAdded }: AddFieldButtonProps
       return
     }
 
-    // Validate field data
-    if (!fieldData.name || !fieldData.title) {
-      console.error('Name and title are required')
-      return
-    }
-
     try {
-      // Remove 'get-' prefix and ensure plural form
-      const schemaType = recordType.replace('get-', '')
-      console.log('Submitting field:', fieldData, 'to schema type:', schemaType)
+      const formId = recordType.replace('get-', '')
+      
+      // Create the field payload
+      const fieldPayload = {
+        name: fieldData.name,
+        title: fieldData.title,
+        type: fieldData.type,
+        // For select type, convert comma-separated options to enum array
+        ...(fieldData.type === 'select' && {
+          enum: fieldData.options
+            .split(',')
+            .map(opt => opt.trim())
+            .filter(Boolean)
+        })
+      }
 
-      const response = await fetch(`/api/schema/${schemaType}/${customerId}`, {
+      const response = await fetch(`/api/schema/${formId}/${customerId}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ field: fieldData })
+        body: JSON.stringify({ field: fieldPayload })
       })
 
       if (!response.ok) {
         const error = await response.text()
-        console.error('Failed to add field:', error)
-        return
+        throw new Error(error)
       }
 
-      const result = await response.json()
-      console.log('Field added successfully:', result)
-
       setOpen(false)
-      setFieldData({ name: '', title: '', type: 'string', required: false })
+      setFieldData({
+        name: '',
+        title: '',
+        type: 'string',
+        options: ''
+      })
       onFieldAdded()
     } catch (error) {
       console.error('Error adding field:', error)
@@ -73,33 +87,41 @@ export function AddFieldButton({ recordType, onFieldAdded }: AddFieldButtonProps
           Add Field
         </Button>
       </DialogTrigger>
-      <DialogContent className="bg-white dark:bg-gray-950">
+      <DialogContent className="bg-white dark:bg-gray-950 border-border">
         <DialogHeader>
-          <DialogTitle className="text-gray-900 dark:text-gray-50">Add New Field</DialogTitle>
+          <DialogTitle className="text-gray-900 dark:text-gray-100">Add New Field</DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="space-y-1">
-            <Label htmlFor="name" className="text-sm text-gray-900 dark:text-gray-50">Field Name</Label>
+          <div className="space-y-2">
+            <Label htmlFor="name" className="text-gray-700 dark:text-gray-300">
+              Field Name
+            </Label>
             <Input
               id="name"
               value={fieldData.name}
               onChange={(e) => setFieldData(prev => ({ ...prev, name: e.target.value }))}
-              placeholder="e.g., phoneNumber"
-              className="h-9 bg-white dark:bg-gray-950 text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800"
+              placeholder="e.g., status"
+              className="bg-white dark:bg-gray-950 text-gray-900 dark:text-gray-100 border-gray-200 dark:border-gray-800"
+              required
             />
           </div>
-          <div className="space-y-1">
-            <Label htmlFor="title" className="text-sm text-gray-900 dark:text-gray-50">Display Title</Label>
+          <div className="space-y-2">
+            <Label htmlFor="title" className="text-gray-700 dark:text-gray-300">
+              Display Title
+            </Label>
             <Input
               id="title"
               value={fieldData.title}
               onChange={(e) => setFieldData(prev => ({ ...prev, title: e.target.value }))}
-              placeholder="e.g., Phone Number"
-              className="h-9 bg-white dark:bg-gray-950 text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800"
+              placeholder="e.g., Status"
+              className="bg-white dark:bg-gray-950 text-gray-900 dark:text-gray-100 border-gray-200 dark:border-gray-800"
+              required
             />
           </div>
-          <div className="space-y-1">
-            <Label htmlFor="type" className="text-sm text-gray-900 dark:text-gray-50">Field Type</Label>
+          <div className="space-y-2">
+            <Label htmlFor="type" className="text-gray-700 dark:text-gray-300">
+              Field Type
+            </Label>
             <select
               id="type"
               className="flex h-9 w-full rounded-md border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-950 px-3 py-1 text-sm 
@@ -114,17 +136,33 @@ export function AddFieldButton({ recordType, onFieldAdded }: AddFieldButtonProps
               <option value="select">Select</option>
             </select>
           </div>
-          <div className="flex items-center space-x-2">
-            <input
-              type="checkbox"
-              id="required"
-              checked={fieldData.required}
-              onChange={(e) => setFieldData(prev => ({ ...prev, required: e.target.checked }))}
-              className="h-4 w-4 rounded border-gray-200 dark:border-gray-800"
-            />
-            <Label htmlFor="required" className="text-sm font-normal text-gray-900 dark:text-gray-50">Required Field</Label>
-          </div>
-          <Button type="submit" className="w-full">Add Field</Button>
+
+          {/* Show options input only for select type */}
+          {fieldData.type === 'select' && (
+            <div className="space-y-2">
+              <Label htmlFor="options" className="text-gray-700 dark:text-gray-300">
+                Options (comma-separated)
+              </Label>
+              <Input
+                id="options"
+                value={fieldData.options}
+                onChange={(e) => setFieldData(prev => ({ ...prev, options: e.target.value }))}
+                placeholder="e.g., Active, Inactive, Pending"
+                className="bg-white dark:bg-gray-950 text-gray-900 dark:text-gray-100 border-gray-200 dark:border-gray-800"
+                required
+              />
+              <p className="text-sm text-gray-500 dark:text-gray-400">
+                Enter options separated by commas
+              </p>
+            </div>
+          )}
+
+          <Button 
+            type="submit"
+            className="w-full bg-primary hover:bg-primary-600 transition-colors"
+          >
+            Add Field
+          </Button>
         </form>
       </DialogContent>
     </Dialog>

@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Plus, Database, GitBranch } from "lucide-react"
+import { Plus, Database, GitBranch, Loader2 } from "lucide-react"
 import { DynamicForm } from "./components/dynamic-form"
 import { useIntegrationApp, useIntegrations } from "@integration-app/react"
 import { useAuth } from '@/app/auth-provider'
@@ -35,6 +35,7 @@ export default function FormsPage() {
   const integrationApp = useIntegrationApp()
   const { integrations } = useIntegrations()
   const { customerId } = useAuth()
+  const [configuring, setConfiguring] = useState<'dataSource' | 'fieldMapping' | null>(null)
 
   // Fetch forms from MongoDB
   useEffect(() => {
@@ -53,7 +54,7 @@ export default function FormsPage() {
         setForms(data.forms)
         
         // Clear selected action if the form no longer exists
-        if (selectedAction && !data.forms.find(f => `get-${f.formId}` === selectedAction)) {
+        if (selectedAction && !data.forms.find((f: FormDefinition) => `get-${f.formId}` === selectedAction)) {
           setSelectedAction('')
         }
       } catch (error) {
@@ -106,20 +107,35 @@ export default function FormsPage() {
     const form = forms.find(f => f.formId === selectedAction.split('-')[1])
     if (!form?.integrationKey || form.type !== 'custom') return
 
-    await integrationApp
-      .connection(form.integrationKey)
-      .dataSource('objects', { instanceKey: form.formId })
-      .openConfiguration()
+    try {
+      setConfiguring('dataSource')
+      await integrationApp
+        .connection(form.integrationKey)
+        .dataSource('objects', { instanceKey: form.formId })
+        .openConfiguration()
+    } finally {
+      setConfiguring(null)
+    }
   }
 
   const handleConfigureFieldMapping = async () => {
     const form = forms.find(f => f.formId === selectedAction.split('-')[1])
     if (!form?.integrationKey || form.type !== 'custom') return
 
-    await integrationApp
-      .connection(form.integrationKey)
-      .fieldMapping('objects', { instanceKey: form.formId })
-      .openConfiguration()
+    try {
+      setConfiguring('fieldMapping')
+      await integrationApp
+        .connection(form.integrationKey)
+        .fieldMapping('objects', { instanceKey: form.formId })
+        .setup()
+
+      await integrationApp
+        .connection(form.integrationKey)
+        .fieldMapping('objects', { instanceKey: form.formId })
+        .openConfiguration()
+    } finally {
+      setConfiguring(null)
+    }
   }
 
   return (
@@ -240,15 +256,25 @@ export default function FormsPage() {
           <Button 
             onClick={handleConfigureDataSource}
             className="flex items-center gap-2 bg-primary hover:bg-primary-600 transition-colors"
+            disabled={configuring === 'dataSource'}
           >
-            <Database className="h-4 w-4" />
+            {configuring === 'dataSource' ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <Database className="h-4 w-4" />
+            )}
             Configure Data Source
           </Button>
           <Button 
             onClick={handleConfigureFieldMapping}
             className="flex items-center gap-2 bg-primary hover:bg-primary-600 transition-colors"
+            disabled={configuring === 'fieldMapping'}
           >
-            <GitBranch className="h-4 w-4" />
+            {configuring === 'fieldMapping' ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <GitBranch className="h-4 w-4" />
+            )}
             Configure Field Mapping
           </Button>
         </div>

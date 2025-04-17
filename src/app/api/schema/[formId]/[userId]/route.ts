@@ -16,15 +16,22 @@ const cleanSchemaProperties = (properties: Map<string, MongoSchemaProperty>) => 
 }
 
 // Helper to create a new field
-const createField = (field: { name: string; title: string; type: string; required?: boolean; options?: string[]; default?: string }): MongoSchemaProperty => {
+const createField = (field: { 
+  name: string; 
+  title: string; 
+  type: string; 
+  required?: boolean; 
+  enum?: string[];
+  default?: string 
+}): MongoSchemaProperty => {
   const schemaField: SchemaField = {
-    type: field.type,
+    type: field.type === 'select' ? 'string' : field.type,
     title: field.title,
     ...(field.type === 'email' && { format: 'email' }),
     ...(field.type === 'phone' && { format: 'phone' }),
     ...(field.type === 'currency' && { format: 'currency' }),
     ...(field.type === 'date' && { format: 'date' }),
-    ...(field.type === 'select' && { enum: field.options }),
+    ...(field.type === 'select' && { enum: field.enum }),
     ...(field.default && { default: field.default })
   }
 
@@ -100,6 +107,10 @@ export async function POST(
       return NextResponse.json({ error: 'Invalid field data' }, { status: 400 })
     }
 
+    if (field.type === 'select' && (!field.enum || !field.enum.length)) {
+      return NextResponse.json({ error: 'Select fields must have options' }, { status: 400 })
+    }
+
     await connectToDatabase()
 
     // First, verify the form exists
@@ -141,7 +152,14 @@ export async function POST(
       })
     }
 
-    const newField = createField(field)
+    const newField = createField({
+      name: field.name,
+      title: field.title,
+      type: field.type,
+      enum: field.enum,
+      required: field.required
+    })
+
     schema.properties.set(field.name, newField)
 
     if (field.required) {

@@ -6,6 +6,8 @@ import { useSchema } from "@/hooks/useSchema"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select } from "@/components/ui/select"
+import { Button } from "@/components/ui/button"
+import { Trash2, Loader2 } from "lucide-react"
 import { AddFieldButton } from "./add-field-button"
 import type { JSONSchema } from "@/types/contact-schema"
 
@@ -32,6 +34,33 @@ export function DynamicForm({ recordType }: DynamicFormProps) {
     }
   }, [schema])
 
+  const handleDeleteField = async (fieldName: string) => {
+    if (!customerId || !recordType) return
+    
+    try {
+      setDeleting(fieldName)
+      const formId = recordType.replace('get-', '')
+      
+      const response = await fetch(`/api/schema/${formId}/${customerId}`, {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ fieldName })
+      })
+
+      if (!response.ok) {
+        throw new Error('Failed to delete field')
+      }
+
+      await mutate() // Refresh the schema
+    } catch (error) {
+      console.error('Error deleting field:', error)
+    } finally {
+      setDeleting(null)
+    }
+  }
+
   if (isLoading) return <div>Loading form schema...</div>
   if (error) return <div>Error loading form schema</div>
   if (!schema) return null
@@ -54,29 +83,46 @@ export function DynamicForm({ recordType }: DynamicFormProps) {
       </div>
       <div className="space-y-4 max-w-2xl">
         {Object.entries(schema.properties).map(([name, field]) => (
-          <div key={name} className="space-y-2">
-            <Label>{field.title}</Label>
-            {field.type === 'select' ? (
-              <Select
-                value={formData[name] || ''}
-                onChange={(e) => handleInputChange(name, e.target.value)}
-              >
-                <option value="">
-                  Select {field.title.toLowerCase()}
-                </option>
-                {field.enum?.map((option: string) => (
-                  <option key={option} value={option}>
-                    {option}
+          <div key={name} className="flex items-start gap-4">
+            <div className="flex-1 space-y-2">
+              <Label>{field.title}</Label>
+              {field.enum && field.enum.length > 0 ? (
+                <Select
+                  value={formData[name] || ''}
+                  onChange={(e) => handleInputChange(name, e.target.value)}
+                  disabled={deleting === name}
+                >
+                  <option value="">
+                    Select {field.title.toLowerCase()}
                   </option>
-                ))}
-              </Select>
-            ) : (
-              <Input
-                type={field.format === 'email' ? 'email' : 'text'}
-                value={formData[name] || ''}
-                onChange={(e) => handleInputChange(name, e.target.value)}
-              />
-            )}
+                  {field.enum.map((option: string) => (
+                    <option key={option} value={option}>
+                      {option}
+                    </option>
+                  ))}
+                </Select>
+              ) : (
+                <Input
+                  type={field.format === 'email' ? 'email' : 'text'}
+                  value={formData[name] || ''}
+                  onChange={(e) => handleInputChange(name, e.target.value)}
+                  disabled={deleting === name}
+                />
+              )}
+            </div>
+            <Button
+              variant="destructive"
+              size="icon"
+              className="mt-8"
+              onClick={() => handleDeleteField(name)}
+              disabled={deleting === name}
+            >
+              {deleting === name ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Trash2 className="h-4 w-4" />
+              )}
+            </Button>
           </div>
         ))}
       </div>

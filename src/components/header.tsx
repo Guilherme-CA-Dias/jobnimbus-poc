@@ -52,7 +52,7 @@ export function Header() {
                 href="/forms"
                 className="inline-flex items-center px-1 pt-1 text-sm font-medium"
               >
-                Forms
+                Configure Forms
               </Link>
               <Link
                 href="/submit-form"

@@ -7,7 +7,18 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select } from "@/components/ui/select"
 import { Button } from "@/components/ui/button"
-import type { FormDefinition } from "@/models/form"
+import type { FormDefinition as FormDefinitionModel } from "@/models/form"
+
+// Define FormDefinition type locally to avoid the linter error
+type FormDefinition = {
+  _id: string
+  formId: string
+  formTitle: string
+  type: 'default' | 'custom'
+  integrationKey?: string
+  createdAt: string
+  updatedAt: string
+}
 
 interface SchemaField {
   type: string
@@ -134,7 +145,7 @@ export default function SubmitFormPage() {
           return (
             <div key={name} className="space-y-2">
               <Label>{field.title}</Label>
-              {field.type === 'select' ? (
+              {field.enum && field.enum.length > 0 ? (
                 <Select
                   value={formData[name] || ''}
                   onChange={(e) => handleInputChange(name, e.target.value)}
@@ -142,7 +153,7 @@ export default function SubmitFormPage() {
                   <option value="">
                     Select {field.title.toLowerCase()}
                   </option>
-                  {field.enum?.map((option: string) => (
+                  {field.enum.map((option: string) => (
                     <option key={option} value={option}>
                       {option}
                     </option>
@@ -172,7 +183,7 @@ export default function SubmitFormPage() {
 }
 
 // Helper function to determine input type
-function getInputType(field: SchemaField): string {
+function getInputType(field: { type: string; format?: string }): string {
   if (field.format === 'email') return 'email'
   if (field.format === 'date') return 'date'
   if (field.format === 'phone') return 'tel'
