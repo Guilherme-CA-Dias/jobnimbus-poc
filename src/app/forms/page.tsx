@@ -10,6 +10,7 @@ import { Plus, Database, GitBranch, Loader2 } from "lucide-react"
 import { DynamicForm } from "./components/dynamic-form"
 import { useIntegrationApp, useIntegrations } from "@integration-app/react"
 import { useAuth } from '@/app/auth-provider'
+import { toast } from "@/components/ui/use-toast"
 
 interface FormDefinition {
   _id: string
@@ -109,10 +110,26 @@ export default function FormsPage() {
 
     try {
       setConfiguring('dataSource')
+      
+      // First, open the data source configuration
       await integrationApp
         .connection(form.integrationKey)
         .dataSource('objects', { instanceKey: form.formId })
         .openConfiguration()
+      
+      // After configuring data source, create a flow instance for receiving events
+      const flowPull = integrationApp
+        .connection(form.integrationKey)
+        .flow('receive-objects-events', { instanceKey: form.formId })
+        .get({ autoCreate: true })
+
+        const flowPush = integrationApp
+        .connection(form.integrationKey)
+        .flow('send-object-events', { instanceKey: form.formId })
+        .get({ autoCreate: true })
+      
+    } catch (error) {
+      console.error("Error configuring data source or creating flow:", error)
     } finally {
       setConfiguring(null)
     }

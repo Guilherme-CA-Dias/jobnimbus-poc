@@ -9,10 +9,16 @@ import { DEFAULT_SCHEMAS } from '@/lib/default-schemas'
 const cleanSchemaProperties = (properties: Map<string, MongoSchemaProperty>) => {
   return Object.fromEntries(
     Array.from(properties.entries()).map(([key, value]) => {
-      const cleanValue = value.toObject()
-      return [key, cleanValue]
+      const cleanValue = value.toObject ? value.toObject() : value;
+      
+      // Remove empty enum arrays
+      if (cleanValue.enum && Array.isArray(cleanValue.enum) && cleanValue.enum.length === 0) {
+        delete cleanValue.enum;
+      }
+      
+      return [key, cleanValue];
     })
-  )
+  );
 }
 
 // Helper to create a new field
@@ -31,9 +37,9 @@ const createField = (field: {
     ...(field.type === 'phone' && { format: 'phone' }),
     ...(field.type === 'currency' && { format: 'currency' }),
     ...(field.type === 'date' && { format: 'date' }),
-    ...(field.type === 'select' && { enum: field.enum }),
+    ...(field.type === 'select' && field.enum && field.enum.length > 0 && { enum: field.enum }),
     ...(field.default && { default: field.default })
-  }
+  };
 
   return {
     ...schemaField,
@@ -41,10 +47,10 @@ const createField = (field: {
       type: schemaField.type,
       title: schemaField.title,
       ...(schemaField.format && { format: schemaField.format }),
-      ...(schemaField.enum?.length && { enum: schemaField.enum }),
+      ...(schemaField.enum && schemaField.enum.length > 0 && { enum: schemaField.enum }),
       ...(schemaField.default && { default: schemaField.default })
     })
-  }
+  };
 }
 
 export async function GET(
@@ -71,17 +77,31 @@ export async function GET(
   })
 
   if (!schema) {
-    const defaultSchema = DEFAULT_SCHEMAS[formId.toLowerCase() as keyof typeof DEFAULT_SCHEMAS]
+    // Check if there's a default schema for this form type
+    const schemaKey = formId.toLowerCase();
+    const defaultSchema = DEFAULT_SCHEMAS[schemaKey as keyof typeof DEFAULT_SCHEMAS];
     
-    schema = await FieldSchema.create({
-      customerId: userId,
-      recordType: formId.toLowerCase(),
-      properties: new Map(Object.entries(defaultSchema?.properties || {
-        id: { type: 'string', title: 'ID' },
-        name: { type: 'string', title: 'Name' }
-      })),
-      required: defaultSchema?.required || ['id', 'name']
-    })
+    if (!defaultSchema) {
+      console.warn(`No default schema found for form type: ${schemaKey}`);
+      // Create a minimal default schema
+      schema = await FieldSchema.create({
+        customerId: userId,
+        recordType: formId.toLowerCase(),
+        properties: new Map(Object.entries({
+          id: { type: 'string', title: 'ID' },
+          name: { type: 'string', title: 'Name' }
+        })),
+        required: ['id', 'name']
+      });
+    } else {
+      // Create schema with the default properties
+      schema = await FieldSchema.create({
+        customerId: userId,
+        recordType: formId.toLowerCase(),
+        properties: new Map(Object.entries(defaultSchema.properties)),
+        required: defaultSchema.required
+      });
+    }
   }
 
   const cleanProperties = cleanSchemaProperties(schema.properties)

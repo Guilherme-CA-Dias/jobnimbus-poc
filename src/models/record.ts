@@ -15,9 +15,6 @@ export interface IRecord {
   customerId: string;
 }
 
-// Specify the database name
-const dbName = 'local-deployments';
-
 const recordSchema = new mongoose.Schema<IRecord>(
   {
     id: {
@@ -55,8 +52,5 @@ const recordSchema = new mongoose.Schema<IRecord>(
 // Compound index for efficient queries
 recordSchema.index({ customerId: 1, recordType: 1 });
 
-// Connect to the specific database
-const connection = mongoose.connection.useDb(dbName);
-
-// This creates a 'records' collection in the local-deployments database
-export const Record = connection.models.Record || connection.model<IRecord>('Record', recordSchema); 
+// This creates a 'records' collection in the database specified in the connection string
+export const Record = mongoose.models.Record || mongoose.model<IRecord>('Record', recordSchema); 

@@ -14,36 +14,6 @@ export const DEFAULT_SCHEMAS = {
     },
     required: ['id', 'name', 'email']
   },
-  leads: {
-    properties: {
-      id: { type: 'string', title: 'ID' },
-      firstName: { type: 'string', title: 'First Name' },
-      lastName: { type: 'string', title: 'Last Name' },
-      email: { type: 'string', title: 'Email', format: 'email' },
-      status: {
-        type: 'string',
-        title: 'Status',
-        enum: ['New', 'Contacted', 'Qualified', 'Unqualified'],
-        default: 'New'
-      }
-    },
-    required: ['id', 'firstName', 'lastName', 'email']
-  },
-  deals: {
-    properties: {
-      id: { type: 'string', title: 'ID' },
-      name: { type: 'string', title: 'Deal Name' },
-      amount: { type: 'string', title: 'Amount', format: 'currency' },
-      stage: {
-        type: 'string',
-        title: 'Stage',
-        enum: ['Prospecting', 'Qualification', 'Proposal', 'Negotiation', 'Closed Won', 'Closed Lost'],
-        default: 'Prospecting'
-      },
-      closeDate: { type: 'string', title: 'Close Date', format: 'date' }
-    },
-    required: ['id', 'name', 'amount']
-  },
   companies: {
     properties: {
       id: { type: 'string', title: 'ID' },
@@ -61,6 +31,27 @@ export const DEFAULT_SCHEMAS = {
       }
     },
     required: ['id', 'name']
+  },
+  tasks: {
+    properties: {
+      id: { type: 'string', title: 'ID' },
+      name: { type: 'string', title: 'Name' },
+      taskName: { type: 'string', title: 'Task Name' },
+      description: { type: 'string', title: 'Description' },
+      status: { 
+        type: 'string', 
+        title: 'Status', 
+        enum: ['Not Started', 'In Progress', 'Completed', 'Deferred'] 
+      },
+      priority: { 
+        type: 'string', 
+        title: 'Priority', 
+        enum: ['Low', 'Medium', 'High', 'Urgent'] 
+      },
+      dueDate: { type: 'string', title: 'Due Date', format: 'date' },
+      assignedTo: { type: 'string', title: 'Assigned To' }
+    },
+    required: ['id', 'name', 'taskName']
   }
 } as const
 

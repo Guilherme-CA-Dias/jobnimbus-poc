@@ -15,8 +15,14 @@ export async function GET(request: Request) {
   await connectToDatabase()
 
   // Ensure default forms exist for this customer
+  const defaultForms = [
+    { formId: 'contacts', formTitle: 'Contacts', type: 'default' },
+    { formId: 'companies', formTitle: 'Companies', type: 'default' },
+    { formId: 'tasks', formTitle: 'Tasks', type: 'default' }
+  ];
+
   await Promise.all(
-    DEFAULT_FORMS.map(async (defaultForm) => {
+    defaultForms.map(async (defaultForm) => {
       await FormDefinition.findOneAndUpdate(
         { 
           customerId, 

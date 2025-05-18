@@ -2,14 +2,17 @@ import useSWR from 'swr'
 import { useAuth } from '@/app/auth-provider'
 import { JSONSchema } from '@/types/contact-schema'
 
-export function useSchema(recordType: string) {
+export function useSchema(formId: string) {
   const { customerId } = useAuth()
   
-  // Remove 'get-' prefix
-  const formId = recordType.replace('get-', '')
+  // Remove 'get-' prefix if present
+  const cleanFormId = formId.startsWith('get-') ? formId.replace('get-', '') : formId
   
-  const { data, error, isLoading, mutate } = useSWR<{ schema: JSONSchema }>(
-    customerId && formId ? `/api/schema/${formId}/${customerId}` : null,
+  // Only fetch if we have both a formId and customerId
+  const shouldFetch = cleanFormId && customerId
+  
+  const { data, error, isLoading } = useSWR(
+    shouldFetch ? `/api/schema/${cleanFormId}/${customerId}` : null,
     async (url) => {
       const response = await fetch(url)
       if (!response.ok) {
@@ -22,7 +25,6 @@ export function useSchema(recordType: string) {
   return {
     schema: data?.schema,
     isLoading,
-    error,
-    mutate
+    error
   }
 } 

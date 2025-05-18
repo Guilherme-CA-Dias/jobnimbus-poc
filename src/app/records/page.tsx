@@ -26,7 +26,16 @@ export default function RecordsPage() {
   const [isLoadingForms, setIsLoadingForms] = useState(true);
   const { customerId } = useAuth();
   
-  const { records, isLoading, hasMore, loadMore, importRecords, isImporting } = useRecords(
+  const { 
+    records, 
+    isLoading, 
+    isError, 
+    hasMore, 
+    loadMore, 
+    isLoadingMore,
+    importRecords, 
+    isImporting 
+  } = useRecords(
     selectedAction || null,
     searchQuery
   );
@@ -64,6 +73,16 @@ export default function RecordsPage() {
     fetchForms();
   }, [customerId, selectedAction]);
 
+  const handleRecordUpdated = () => {
+    // Refresh the records list
+    mutate();
+  };
+
+  const handleRecordDeleted = () => {
+    // Refresh the records list
+    mutate();
+  };
+
   return (
     <div className="container mx-auto py-10 space-y-6">
       {/* Header */}
@@ -87,7 +106,7 @@ export default function RecordsPage() {
             // For default forms, use the standard action keys (get-contacts, get-leads, etc.)
             // For custom forms, use get-objects with the form ID
             const actionKey = form.type === 'default' 
-              ? `get-${form.formId}s` 
+              ? `get-${form.formId}` 
               : `get-${form.formId}`;
               
             return (
@@ -131,7 +150,11 @@ export default function RecordsPage() {
         <RecordsTable 
           records={records}
           isLoading={isLoading}
-          isError={null}
+          isError={isError}
+          hasMore={hasMore}
+          onLoadMore={loadMore}
+          onRecordUpdated={handleRecordUpdated}
+          onRecordDeleted={handleRecordDeleted}
         />
       </div>
     </div>

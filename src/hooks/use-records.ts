@@ -2,15 +2,21 @@ import useSWR from 'swr';
 import { RecordsResponse } from '@/types/record';
 import { authenticatedFetcher } from '@/lib/fetch-utils';
 import { useState, useCallback, useEffect } from 'react';
+import { RECORD_ACTIONS } from '@/lib/constants';
 
 export function useRecords(actionKey: string | null, search: string = '') {
   const [allRecords, setAllRecords] = useState([]);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [isImporting, setIsImporting] = useState(false);
 
+  // Get default form types from RECORD_ACTIONS
+  const defaultFormTypes = RECORD_ACTIONS
+    .filter(action => action.type === 'default')
+    .map(action => action.key.replace('get-', ''));
+
   // Extract the form ID from the action key for custom forms
   const formId = actionKey?.startsWith('get-') ? actionKey.substring(4) : null;
-  const isCustomForm = formId && !['contacts', 'leads', 'companies', 'deals'].includes(formId);
+  const isCustomForm = formId && !defaultFormTypes.includes(formId);
   
   // For custom forms, we'll use 'get-objects' with instanceKey parameter
   const apiEndpoint = actionKey 
