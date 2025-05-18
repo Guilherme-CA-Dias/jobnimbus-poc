@@ -1,11 +1,12 @@
-# Integration Use Case Template
+# Integration App Demo
 
-This is a template for an application showcasing integration capabilities using [Integration.app](https://integration.app). The app is built with Next.js and demonstrates how to implement user authentication and integration token generation.
+This is a demonstration application showcasing integration capabilities using [Integration.app](https://integration.app). The app is built with Next.js and demonstrates how to implement user authentication, integration token generation, and data synchronization with external systems.
 
 ## Prerequisites
 
 - Node.js 18+ installed
 - Integration.app workspace credentials (Workspace Key and Secret)
+- MongoDB database (for storing records and schemas)
 
 ## Setup
 
@@ -41,6 +42,38 @@ MONGODB_URI=your_mongodb_connection_string
 
 You can find these credentials in your Integration.app workspace settings.
 
+## Configuration
+
+### Webhook URLs
+
+The application sends webhook notifications for record operations (create, update, delete). You can configure the webhook URLs in `src/lib/webhook-utils.ts`:
+
+```typescript
+// Define webhook URLs for default record types
+const WEBHOOK_URLS = {
+  tasks: 'https://api.integration.app/webhooks/app-events/4bd9f7cc-f295-4eac-bd78-d051bc127f59',
+  contacts: 'https://api.integration.app/webhooks/app-events/7cb4f624-01f5-4662-b886-68b9461b8b0a',
+  companies: 'https://api.integration.app/webhooks/app-events/cd9f4430-8f4e-45a4-badd-9d4666078540',
+  // Default URL for custom objects
+  custom: 'https://api.integration.app/webhooks/app-events/19c8f829-0723-4030-9164-95398285f5da'
+};
+```
+
+Replace these URLs with your own webhook endpoints from Integration.app.
+
+### Record Types
+
+Default record types are defined in `src/lib/constants.ts`. You can modify this file to add or remove record types:
+
+```typescript
+export const RECORD_ACTIONS = [
+  { key: 'get-contacts', label: 'Contacts', type: 'default' },
+  { key: 'get-companies', label: 'Companies', type: 'default' },
+  { key: 'get-tasks', label: 'Tasks', type: 'default' },
+  // Add more record types as needed
+];
+```
+
 ## Running the Application
 
 1. Start the development server:
@@ -53,42 +86,79 @@ yarn dev
 
 2. Open [http://localhost:3000](http://localhost:3000) in your browser.
 
-## Project Structure
-
-- `/src/app` - Next.js app router pages and API routes
-  - `/users` - Example implementation of external data import
-  - `/api` - Backend API routes for users and integration token management
-- `/src/components` - Reusable React components
-- `/src/lib` - Utility functions and helpers
-- `/src/models` - Data models and types
-- `/public` - Static assets
-
-## Template Features
+## Key Features
 
 ### Authentication
 
-The template implements a simple authentication mechanism using a randomly generated UUID as the customer ID. This simulates a real-world scenario where your application would have proper user authentication. The customer ID is used to:
+The application uses a simple authentication mechanism with a customer ID. In a production environment, you would replace this with your own authentication system.
 
-- Identify the user/customer in the integration platform
-- Generate integration tokens for external app connections
-- Associate imported data with specific customers
+### Integrations
 
-### Users Example
+The Integrations page allows users to connect to external applications using Integration.app. Once connected, you can import data from these applications.
 
-The template includes a complete example of importing and managing users from an external application:
+### Forms
 
-- User data model and TypeScript types
-- API routes for user import and retrieval
-- React components for displaying user data
-- Integration with SWR for efficient data fetching
-- Example of using the Integration.app client for data import
+The Forms page allows you to create and manage custom forms with dynamic fields. You can:
+- Create new form types
+- Add custom fields to forms
+- Delete fields from forms
 
-## Available Scripts
+### Records
 
-- `npm run dev` - Start development server with hot reload
-- `npm run build` - Build the application for production
-- `npm run start` - Start the production server
-- `npm run lint` - Run ESLint to check code quality
+The Records page displays data imported from external applications. You can:
+- View records by type
+- Edit records
+- Delete records
+- Import new records
+
+### Submit Form
+
+The Submit Form page allows users to submit data through custom forms. The submitted data is sent to the appropriate webhook URL based on the form type.
+
+## Project Structure
+
+- `/src/app` - Next.js app router pages and API routes
+  - `/api` - Backend API routes for records, schemas, and integration tokens
+  - `/records` - Record management pages and components
+  - `/forms` - Form management pages and components
+  - `/integrations` - Integration connection pages
+  - `/submit-form` - Form submission page
+- `/src/components` - Reusable React components
+- `/src/hooks` - Custom React hooks
+- `/src/lib` - Utility functions and helpers
+- `/src/types` - TypeScript type definitions
+
+## API Endpoints
+
+- `/api/records` - CRUD operations for records
+- `/api/schema/[formId]/[userId]` - Form schema management
+- `/api/forms` - Form definition management
+- `/api/integration-token` - Integration token generation
+- `/api/self` - User information
+
+## Webhook Payloads
+
+When records are created, updated, or deleted, the application sends webhook notifications with the following structure:
+
+```json
+{
+  "type": "created|updated|deleted",
+  "data": {
+    "id": "record-id",
+    "recordType": "record-type",
+    "fields": { /* record fields */ }
+  },
+  "customerId": "customer-id"
+}
+```
+
+For custom record types, an additional `instanceKey` property is included in the payload.
+
+## Troubleshooting
+
+- **MongoDB Connection Issues**: Ensure your MongoDB connection string is correct and the database is accessible.
+- **Integration Token Errors**: Verify your Integration.app workspace credentials in the `.env` file.
+- **Webhook Errors**: Check the webhook URLs in `webhook-utils.ts` and ensure they are correctly configured in Integration.app.
 
 ## License
 
