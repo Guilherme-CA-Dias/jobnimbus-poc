@@ -17,10 +17,20 @@ export async function GET(request: NextRequest) {
 
     const searchParams = request.nextUrl.searchParams;
     const actionKey = searchParams.get('action') as RecordActionKey;
+    const instanceKey = searchParams.get('instanceKey');
+    const autoCreate = searchParams.get('autoCreate') === 'true';
 
     if (!actionKey) {
       return NextResponse.json(
         { error: 'Action key is required' },
+        { status: 400 }
+      );
+    }
+
+    // For get-objects action, instanceKey is required
+    if (actionKey === 'get-objects' && !instanceKey) {
+      return NextResponse.json(
+        { error: 'Instance key is required for get-objects action' },
         { status: 400 }
       );
     }
@@ -42,10 +52,14 @@ export async function GET(request: NextRequest) {
     while (hasMoreRecords) {
       console.log(`Fetching records with cursor: ${currentCursor}`);
       
+      // Use the correct syntax for running the action
       const result = await client
         .connection(firstConnection.id)
-        .action(actionKey)
-        .run(currentCursor ? { cursor: currentCursor } : null);
+        .action(actionKey, {
+          instanceKey: instanceKey || undefined,
+          autoCreate: autoCreate
+        })
+        .run({cursor: currentCursor});
 
       const records = result.output.records || [];
       allRecords = [...allRecords, ...records];
@@ -55,7 +69,7 @@ export async function GET(request: NextRequest) {
         const recordsToSave = records.map(record => ({
           ...record,
           customerId: auth.customerId,
-          recordType: actionKey,
+          recordType: actionKey === 'get-objects' ? instanceKey : actionKey,
         }));
 
         await Promise.all(recordsToSave.map(record => 

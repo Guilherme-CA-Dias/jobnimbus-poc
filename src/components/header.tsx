@@ -43,17 +43,18 @@ export function Header() {
                 Integrations
               </Link>
               <Link
+                href="/forms"
+                className="inline-flex items-center px-1 pt-1 text-sm font-medium"
+              >
+                Configure Fields
+              </Link>
+              <Link
                 href="/records"
                 className="inline-flex items-center px-1 pt-1 text-sm font-medium"
               >
                 Records
               </Link>
-              <Link
-                href="/forms"
-                className="inline-flex items-center px-1 pt-1 text-sm font-medium"
-              >
-                Configure Forms
-              </Link>
+
               <Link
                 href="/submit-form"
                 className="inline-flex items-center px-1 pt-1 text-sm font-medium"

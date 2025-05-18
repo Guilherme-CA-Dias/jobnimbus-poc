@@ -18,6 +18,7 @@ export async function GET(request: NextRequest) {
 
     const searchParams = request.nextUrl.searchParams;
     const action = searchParams.get('action') as RecordActionKey;
+    const instanceKey = searchParams.get('instanceKey');
     const cursor = searchParams.get('cursor');
     const search = searchParams.get('search');
 
@@ -28,13 +29,21 @@ export async function GET(request: NextRequest) {
       );
     }
 
+    // For get-objects action, instanceKey is required
+    if (action === 'get-objects' && !instanceKey) {
+      return NextResponse.json(
+        { error: 'Instance key is required for get-objects action' },
+        { status: 400 }
+      );
+    }
+
     // Connect to MongoDB and fetch records
     await connectToDatabase();
     
     // Build the query
     const query: any = {
       customerId: auth.customerId,
-      recordType: action
+      recordType: action === 'get-objects' ? instanceKey : action
     };
 
     // Add search conditions if search query exists

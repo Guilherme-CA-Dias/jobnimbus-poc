@@ -4,18 +4,65 @@ import { RecordsTable } from "./components/records-table"
 import { useRecords } from "@/hooks/use-records"
 import { Button } from "@/components/ui/button"
 import { RefreshCw, Loader2, Search } from "lucide-react"
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Select } from "@/components/ui/select"
-import { RecordActionKey, RECORD_ACTIONS } from "@/lib/constants"
 import { Input } from "@/components/ui/input"
+import { useAuth } from '@/app/auth-provider'
+
+interface FormDefinition {
+  _id: string
+  formId: string
+  formTitle: string
+  type: 'default' | 'custom'
+  integrationKey?: string
+  createdAt: string
+  updatedAt: string
+}
 
 export default function RecordsPage() {
-  const [selectedAction, setSelectedAction] = useState<RecordActionKey | ''>('');
+  const [selectedAction, setSelectedAction] = useState<string | ''>('');
   const [searchQuery, setSearchQuery] = useState('');
+  const [forms, setForms] = useState<FormDefinition[]>([]);
+  const [isLoadingForms, setIsLoadingForms] = useState(true);
+  const { customerId } = useAuth();
+  
   const { records, isLoading, hasMore, loadMore, importRecords, isImporting } = useRecords(
     selectedAction || null,
     searchQuery
   );
+
+  // Fetch forms from MongoDB
+  useEffect(() => {
+    const fetchForms = async () => {
+      if (!customerId) return;
+
+      try {
+        setIsLoadingForms(true);
+        const response = await fetch(`/api/forms?customerId=${customerId}`);
+        const data = await response.json();
+        
+        if (!response.ok) {
+          throw new Error(data.error || 'Failed to fetch forms');
+        }
+
+        setForms(data.forms);
+        
+        // Clear selected action if the form no longer exists
+        if (selectedAction && !data.forms.find((f: FormDefinition) => 
+          `get-${f.formId}` === selectedAction || 
+          (f.type === 'default' && `get-${f.formId}s` === selectedAction)
+        )) {
+          setSelectedAction('');
+        }
+      } catch (error) {
+        console.error('Error fetching forms:', error);
+      } finally {
+        setIsLoadingForms(false);
+      }
+    };
+    
+    fetchForms();
+  }, [customerId, selectedAction]);
 
   return (
     <div className="container mx-auto py-10 space-y-6">
@@ -31,15 +78,24 @@ export default function RecordsPage() {
       <div className="grid gap-6 md:grid-cols-[2fr,2fr,auto]">
         <Select
           value={selectedAction}
-          onChange={(e) => setSelectedAction(e.target.value as RecordActionKey)}
+          onChange={(e) => setSelectedAction(e.target.value)}
           className="w-full"
+          disabled={isLoadingForms}
         >
           <option value="">Select record type</option>
-          {RECORD_ACTIONS.map((action) => (
-            <option key={action.key} value={action.key}>
-              {action.name}
-            </option>
-          ))}
+          {forms.map((form) => {
+            // For default forms, use the standard action keys (get-contacts, get-leads, etc.)
+            // For custom forms, use get-objects with the form ID
+            const actionKey = form.type === 'default' 
+              ? `get-${form.formId}s` 
+              : `get-${form.formId}`;
+              
+            return (
+              <option key={form.formId} value={actionKey}>
+                {form.formTitle} {form.type === 'custom' ? '(Custom)' : ''}
+              </option>
+            );
+          })}
         </Select>
 
         <div className="relative">
@@ -75,8 +131,7 @@ export default function RecordsPage() {
         <RecordsTable 
           records={records}
           isLoading={isLoading}
-          hasMore={hasMore}
-          onLoadMore={loadMore}
+          isError={null}
         />
       </div>
     </div>

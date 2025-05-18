@@ -8,8 +8,19 @@ export function useRecords(actionKey: string | null, search: string = '') {
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [isImporting, setIsImporting] = useState(false);
 
+  // Extract the form ID from the action key for custom forms
+  const formId = actionKey?.startsWith('get-') ? actionKey.substring(4) : null;
+  const isCustomForm = formId && !['contacts', 'leads', 'companies', 'deals'].includes(formId);
+  
+  // For custom forms, we'll use 'get-objects' with instanceKey parameter
+  const apiEndpoint = actionKey 
+    ? isCustomForm
+      ? `/api/records?action=get-objects&instanceKey=${formId}${search ? `&search=${encodeURIComponent(search)}` : ''}`
+      : `/api/records?action=${actionKey}${search ? `&search=${encodeURIComponent(search)}` : ''}`
+    : null;
+
   const { data, error, isLoading, mutate } = useSWR<RecordsResponse>(
-    actionKey ? `/api/records?action=${actionKey}${search ? `&search=${encodeURIComponent(search)}` : ''}` : null,
+    apiEndpoint,
     authenticatedFetcher
   );
 
@@ -31,9 +42,12 @@ export function useRecords(actionKey: string | null, search: string = '') {
 
     setIsLoadingMore(true);
     try {
-      const nextPage = await authenticatedFetcher(
-        `/api/records?action=${actionKey}&cursor=${data.cursor}${search ? `&search=${encodeURIComponent(search)}` : ''}`
-      );
+      // For custom forms, use 'get-objects' with instanceKey
+      const endpoint = isCustomForm
+        ? `/api/records?action=get-objects&instanceKey=${formId}&cursor=${data.cursor}${search ? `&search=${encodeURIComponent(search)}` : ''}`
+        : `/api/records?action=${actionKey}&cursor=${data.cursor}${search ? `&search=${encodeURIComponent(search)}` : ''}`;
+      
+      const nextPage = await authenticatedFetcher(endpoint);
       setAllRecords(prev => [...prev, ...nextPage.records]);
       await mutate({ ...nextPage, records: [...allRecords, ...nextPage.records] }, false);
     } catch (error) {
@@ -41,16 +55,19 @@ export function useRecords(actionKey: string | null, search: string = '') {
     } finally {
       setIsLoadingMore(false);
     }
-  }, [data?.cursor, actionKey, isLoadingMore, allRecords, mutate, search]);
+  }, [data?.cursor, actionKey, isLoadingMore, allRecords, mutate, search, formId, isCustomForm]);
 
   const importRecords = async () => {
     if (!actionKey || isImporting) return;
 
     setIsImporting(true);
     try {
-      const response = await authenticatedFetcher(
-        `/api/records/import?action=${actionKey}`
-      );
+      // For custom forms, use 'get-objects' with instanceKey and autoCreate=true
+      const endpoint = isCustomForm
+        ? `/api/records/import?action=get-objects&instanceKey=${formId}&autoCreate=true`
+        : `/api/records/import?action=${actionKey}`;
+      
+      const response = await authenticatedFetcher(endpoint);
 
       if (response.error) {
         throw new Error(response.error);
