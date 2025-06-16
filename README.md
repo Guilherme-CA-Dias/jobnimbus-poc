@@ -51,11 +51,10 @@ The application sends webhook notifications for record operations (create, updat
 ```typescript
 // Define webhook URLs for default record types
 const WEBHOOK_URLS = {
-  tasks: 'https://api.integration.app/webhooks/app-events/4bd9f7cc-f295-4eac-bd78-d051bc127f59',
-  contacts: 'https://api.integration.app/webhooks/app-events/7cb4f624-01f5-4662-b886-68b9461b8b0a',
-  companies: 'https://api.integration.app/webhooks/app-events/cd9f4430-8f4e-45a4-badd-9d4666078540',
+  contacts: 'https://api.integration.app/webhooks/app-events/6b05b1a8-330a-40f5-b429-32243474d981',
+  companies: '',
   // Default URL for custom objects
-  custom: 'https://api.integration.app/webhooks/app-events/19c8f829-0723-4030-9164-95398285f5da'
+  custom: ''
 };
 ```
 
@@ -69,7 +68,7 @@ Default record types are defined in `src/lib/constants.ts`. You can modify this 
 export const RECORD_ACTIONS = [
   { key: 'get-contacts', label: 'Contacts', type: 'default' },
   { key: 'get-companies', label: 'Companies', type: 'default' },
-  { key: 'get-tasks', label: 'Tasks', type: 'default' },
+  { key: 'get-invoices', label: 'Invoices', type: 'default' },
   // Add more record types as needed
 ];
 ```
