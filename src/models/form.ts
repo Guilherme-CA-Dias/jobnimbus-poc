@@ -1,4 +1,5 @@
 import mongoose from 'mongoose'
+import { RECORD_ACTIONS } from '@/lib/constants'
 
 const formDefinitionSchema = new mongoose.Schema({
   customerId: { type: String, required: true },
@@ -17,25 +18,8 @@ export const FormDefinition = mongoose.models.FormDefinition ||
   mongoose.model('FormDefinition', formDefinitionSchema)
 
 // Default forms to be seeded
-export const DEFAULT_FORMS = [
-  { 
-    formId: 'contacts', 
-    formTitle: 'Contacts',
-    type: 'default'
-  },
-  { 
-    formId: 'leads', 
-    formTitle: 'Leads',
-    type: 'default'
-  },
-  { 
-    formId: 'companies', 
-    formTitle: 'Companies',
-    type: 'default'
-  },
-  { 
-    formId: 'deals', 
-    formTitle: 'Deals',
-    type: 'default'
-  }
-] as const 
+export const DEFAULT_FORMS = RECORD_ACTIONS.map(action => ({
+  formId: action.key.replace('get-', ''),
+  formTitle: action.name,
+  type: action.type
+})) 

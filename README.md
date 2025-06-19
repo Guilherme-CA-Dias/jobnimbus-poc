@@ -135,6 +135,87 @@ The Submit Form page allows users to submit data through custom forms. The submi
 - `/api/forms` - Form definition management
 - `/api/integration-token` - Integration token generation
 - `/api/self` - User information
+- `/api/webhooks` - Webhook endpoint for receiving record updates from external sources
+
+## Webhook Endpoint
+
+The `/api/webhooks` endpoint is responsible for receiving and processing record updates from Integration.app. This endpoint handles incoming webhook payloads and updates the local database accordingly.
+
+### Expected Payload Structure
+
+External sources should send POST requests to `/api/webhooks` with the following payload structure:
+
+```json
+{
+  "customerId": "string",
+  "recordType": "string",
+  "data": {
+    "id": "string|number",
+    "name": "string (optional)",
+    "fields": {
+      "field1": "value1",
+      "field2": "value2"
+    },
+    "createdTime": "string (optional)",
+    "updatedTime": "string (optional)",
+    "additional_fields": "any"
+  }
+}
+```
+
+### Payload Fields
+
+- **customerId** (required): The unique identifier for the customer/tenant
+- **recordType** (required): The type of record (e.g., "contacts", "companies", "invoices")
+- **data** (required): The record data object
+  - **id** (required): Unique identifier for the record
+  - **name** (optional): Display name for the record
+  - **fields** (optional): Object containing field values
+  - **createdTime** (optional): ISO timestamp when the record was created
+  - **updatedTime** (optional): ISO timestamp when the record was last updated
+  - Additional fields can be included as needed
+
+### Response Format
+
+The endpoint returns a JSON response with the following structure:
+
+```json
+{
+  "success": true,
+  "recordId": "string",
+  "_id": "mongodb_object_id",
+  "customerId": "string",
+  "recordType": "string",
+  "status": "created|updated|unchanged"
+}
+```
+
+### Behavior
+
+- **New Records**: If a record with the given `id` and `customerId` doesn't exist, it will be created
+- **Existing Records**: If a record exists, it will be updated only if the data has changed
+- **Duplicate Prevention**: The endpoint compares existing data with new data to avoid unnecessary updates
+- **Error Handling**: Returns appropriate HTTP status codes and error messages for invalid payloads
+
+### Example Usage
+
+```bash
+curl -X POST http://localhost:3000/api/webhooks \
+  -H "Content-Type: application/json" \
+  -d '{
+    "customerId": "customer123",
+    "recordType": "contacts",
+    "data": {
+      "id": "contact456",
+      "name": "John Doe",
+      "fields": {
+        "email": "john@example.com",
+        "phone": "+1234567890"
+      },
+      "createdTime": "2024-01-01T00:00:00Z"
+    }
+  }'
+```
 
 ## Webhook Payloads
 

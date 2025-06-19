@@ -5,13 +5,8 @@ export const RECORD_ACTIONS = [
     type: 'default'
   },
   {
-    key: 'get-companies',
-    name: 'Companies',
-    type: 'default'
-  },
-  {
-    key: 'get-tasks',
-    name: 'Tasks',
+    key: 'get-payments',
+    name: 'Payments',
     type: 'default'
   }
 ] as const;
