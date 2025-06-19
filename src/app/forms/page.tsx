@@ -22,6 +22,11 @@ interface FormDefinition {
   updatedAt: string
 }
 
+interface Connection {
+  key: string
+  name: string
+}
+
 export default function FormsPage() {
   const [selectedAction, setSelectedAction] = useState('')
   const [isCreatingForm, setIsCreatingForm] = useState(false)
@@ -105,28 +110,55 @@ export default function FormsPage() {
   }
 
   const handleConfigureDataSource = async () => {
+    console.log('handleConfigureDataSource called')
     const form = forms.find(f => f.formId === selectedAction.split('-')[1])
-    if (!form?.integrationKey || form.type !== 'custom') return
+    console.log('Selected form:', form)
+    
+    if (!form) {
+      console.log('No form found, returning')
+      return
+    }
+    
+    // Only require integration key for custom forms
+    if (form.type === 'custom' && !form.integrationKey) {
+      console.log('Custom form requires integration key, returning')
+      return
+    }
 
     try {
       setConfiguring('dataSource')
       
+      const dataSourceName = form.type === 'custom' ? 'objects' : selectedAction.replace('get-', '')
+      console.log('dataSourceName:', dataSourceName)
+      const instanceConfig = form.type === 'custom' ? { instanceKey: form.formId } : undefined
+      
+      // Get the first available connection
+      const connectionsResponse = await integrationApp.connections.find()
+      const firstConnection = connectionsResponse.items?.[0]
+      
+      if (!firstConnection) {
+        alert('No connections found. Please set up a connection first.')
+        return
+      }
+
       // First, open the data source configuration
       await integrationApp
-        .connection(form.integrationKey)
-        .dataSource('objects', { instanceKey: form.formId })
+        .connection(form.type === 'custom' ? form.integrationKey! : firstConnection.id)
+        .dataSource(dataSourceName, instanceConfig)
         .openConfiguration()
       
       // After configuring data source, create a flow instance for receiving events
-      const flowPull = integrationApp
-        .connection(form.integrationKey)
-        .flow('receive-objects-events', { instanceKey: form.formId })
-        .get({ autoCreate: true })
+      if (form.type === 'custom') {
+        const flowPull = integrationApp
+          .connection(form.integrationKey)
+          .flow('receive-objects-events', instanceConfig)
+          .get({ autoCreate: true })
 
         const flowPush = integrationApp
-        .connection(form.integrationKey)
-        .flow('send-object-events', { instanceKey: form.formId })
-        .get({ autoCreate: true })
+          .connection(form.integrationKey)
+          .flow('send-object-events', instanceConfig)
+          .get({ autoCreate: true })
+      }
       
     } catch (error) {
       console.error("Error configuring data source or creating flow:", error)
@@ -137,18 +169,39 @@ export default function FormsPage() {
 
   const handleConfigureFieldMapping = async () => {
     const form = forms.find(f => f.formId === selectedAction.split('-')[1])
-    if (!form?.integrationKey || form.type !== 'custom') return
+    if (!form) {
+      console.log('No form found, returning')
+      return
+    }
+    
+    // Only require integration key for custom forms
+    if (form.type === 'custom' && !form.integrationKey) {
+      console.log('Custom form requires integration key, returning')
+      return
+    }
 
     try {
       setConfiguring('fieldMapping')
+      const dataSourceName = form.type === 'custom' ? 'objects' : selectedAction.replace('get-', '')
+      const instanceConfig = form.type === 'custom' ? { instanceKey: form.formId } : undefined
+      
+      // Get the first available connection
+      const connectionsResponse = await integrationApp.connections.find()
+      const firstConnection = connectionsResponse.items?.[0]
+      
+      if (!firstConnection) {
+        alert('No connections found. Please set up a connection first.')
+        return
+      }
+
       await integrationApp
-        .connection(form.integrationKey)
-        .fieldMapping('objects', { instanceKey: form.formId })
+        .connection(form.type === 'custom' ? form.integrationKey! : firstConnection.id)
+        .fieldMapping(dataSourceName, instanceConfig)
         .setup()
 
       await integrationApp
-        .connection(form.integrationKey)
-        .fieldMapping('objects', { instanceKey: form.formId })
+        .connection(form.type === 'custom' ? form.integrationKey! : firstConnection.id)
+        .fieldMapping(dataSourceName, instanceConfig)
         .openConfiguration()
     } finally {
       setConfiguring(null)
@@ -158,17 +211,16 @@ export default function FormsPage() {
   return (
     <div className="container mx-auto py-10 space-y-6">
       <div>
-        <h1 className="text-3xl font-bold tracking-tight">Forms</h1>
+        <h1 className="text-3xl font-bold tracking-tight">Record types and configuration</h1>
         <p className="text-muted-foreground mt-2">
-          Select a record type or create a new form
+          Select a record type or create a new form or <span className="underline">set the data collection and field mapping</span>
         </p>
       </div>
-
       <div className="flex items-center gap-4">
         <Select
           value={selectedAction}
           onChange={(e) => setSelectedAction(e.target.value)}
-          className="w-full max-w-md"
+          className="w-full max-w-md pr-8"
           disabled={isLoading}
         >
           <option value="">Select record type</option>
@@ -268,7 +320,7 @@ export default function FormsPage() {
         </Dialog>
       </div>
 
-      {selectedAction && forms.find(f => f.formId === selectedAction.split('-')[1])?.type === 'custom' && (
+      {selectedAction && (
         <div className="flex gap-4">
           <Button 
             onClick={handleConfigureDataSource}

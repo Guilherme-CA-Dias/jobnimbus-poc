@@ -3,6 +3,7 @@ import { connectToDatabase } from '@/lib/mongodb'
 import { FormDefinition, DEFAULT_FORMS } from '@/models/form'
 import { getIntegrationClient } from '@/lib/integration-app-client'
 import { getStoredAuth, type AuthCustomer } from '@/lib/auth'
+import { RECORD_ACTIONS } from '@/lib/constants'
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url)
@@ -15,11 +16,11 @@ export async function GET(request: Request) {
   await connectToDatabase()
 
   // Ensure default forms exist for this customer
-  const defaultForms = [
-    { formId: 'contacts', formTitle: 'Contacts', type: 'default' },
-    { formId: 'companies', formTitle: 'Companies', type: 'default' },
-    { formId: 'tasks', formTitle: 'Tasks', type: 'default' }
-  ];
+  const defaultForms = RECORD_ACTIONS.map(action => ({
+    formId: action.key.replace('get-', ''),
+    formTitle: action.name,
+    type: action.type
+  }))
 
   await Promise.all(
     defaultForms.map(async (defaultForm) => {
